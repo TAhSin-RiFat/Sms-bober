@@ -119,43 +119,40 @@ for($i=1;$i<=30;$i++){
 // ==========================================
 // ⚡ Parallel Execution Engine
 // ==========================================
-$mh = curl_multi_init(); $handles = [];
-foreach($api_requests as $key => $api){
+$results = [];
+
+foreach($api_requests as $api){
+
     $ch = curl_init();
+
     curl_setopt($ch, CURLOPT_URL, $api['url']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 20);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    
+
     $headers = $api['headers'] ?? [];
-    // User-Agent ফিক্স করে রিয়েল ডেস্কটপ ব্রাউজারের মতো দেওয়া হয়েছে যেন WAF ব্লক না করে
-    $headers[] = 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+    $headers[] = 'User-Agent: Mozilla/5.0';
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     if(isset($api['method']) && $api['method'] === "GET"){
-        curl_setopt($ch, CURLOPT_POST, false);
+        curl_setopt($ch, CURLOPT_HTTPGET, true);
     } else {
         curl_setopt($ch, CURLOPT_POST, true);
-        if(isset($api['data'])) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($api['data']));
-        }
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($api['data'] ?? []));
     }
-    $handles[$key] = $ch;
-    curl_multi_add_handle($mh, $ch);
-}
 
-$running = null;
-do { curl_multi_exec($mh, $running); curl_multi_select($mh); } while ($running > 0);
-
-$final_results = [];
-foreach($handles as $key => $ch){
-    $final_results[$api_requests[$key]['name']] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_multi_remove_handle($mh, $ch);
+    $response = curl_exec($ch);
+    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    usleep(100000); // 0.1 second delay
 
+    $results[$api['name']] = $http;
+
+    // 🔥 এখানে delay
+    usleep(300000); // 0.3 sec
 }
-curl_multi_close($mh);
 
-echo json_encode(["status" => "success", "total_hits" => count($api_requests), "results" => $final_results], JSON_PRETTY_PRINT);
-?>
+echo json_encode([
+    "status" => "success",
+    "total_hits" => count($api_requests),
+    "results" => $results
+], JSON_PRETTY_PRINT);
