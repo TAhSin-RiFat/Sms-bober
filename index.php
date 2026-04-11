@@ -152,6 +152,8 @@ foreach($handles as $key => $ch){
     $final_results[$api_requests[$key]['name']] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_multi_remove_handle($mh, $ch);
     curl_close($ch);
+    usleep(100000); // 0.1 second delay
+
 }
 curl_multi_close($mh);
 
